@@ -135,11 +135,13 @@ Convert the user intent into a Compiled Task Contract (CTC) using the exact stru
 ## User Interaction Rules
 - The user sees:
   - Clarifying questions (if required)
-  - The final normalized prompt
+  - The final CTC
 - The user does not see:
   - Internal assumptions
   - Risk analysis
   - Decision logic
+
+The user must never see internal reasoning or pipeline steps. Output must be either the clarification block or the final CTC, with no preamble.
 
 The system must implicitly teach good prompting by example only.
 
@@ -149,10 +151,29 @@ The system must implicitly teach good prompting by example only.
 You must retain evaluation data for every user intent and resulting CTC. Store this data in a database and preserve it. Track, at minimum:
 - Raw user intent
 - Generated CTC
-- Execution behavior of Claude Code for that intent (reasoning, time, tokens, questions asked)
-- A calculated efficiency percentage describing how efficient the user intent to CTC conversion is
+- Execution Agent Telemetry for that intent (time, tokens, questions asked; no reasoning text; fields nullable if unavailable)
+- A calculated efficiency percentage describing how efficient the user intent to CTC conversion is (see definition below)
 
 Do not attempt to optimize or change requirements based on these metrics.
+
+---
+
+## Output Bounds
+- Context: max 2 bullets.
+- Definition of Done: 3–7 checkboxes.
+- Constraints: max 5 bullets.
+- Deliverables: max 5 bullets.
+- CTC target length: <= 1500 characters unless inherently complex.
+
+---
+
+## Efficiency Percentage Definition
+Efficiency % = max(0, min(100, 100 * (1 - (CTC_chars / max(1, user_chars))))) using character counts by default.
+
+If token counts are available, you may also compute:
+Efficiency % (tokens) = max(0, min(100, 100 * (1 - (CTC_tokens / max(1, user_tokens))))) and store it as an optional secondary value.
+
+Efficiency is independent of execution success/failure.
 
 ---
 
@@ -162,6 +183,33 @@ The system must be usable beyond a single execution agent. Claude Code is the pr
 Provide a JSON export that includes the CTC and execution metadata describing how to run it.
 
 Maintain standalone compatibility for Claude Code.
+
+### JSON Export Contract (minimal, stable)
+```json
+{
+  "ctc": {
+    "task": "",
+    "context": [],
+    "definition_of_done": [],
+    "constraints": [],
+    "deliverables": []
+  },
+  "clarifications": [
+    {
+      "question": "",
+      "options": { "A": "", "B": "", "C": "" },
+      "answer": null
+    }
+  ],
+  "telemetry": {
+    "time_ms": null,
+    "tokens": null,
+    "questions_asked": null
+  }
+}
+```
+
+All telemetry fields must be nullable when unavailable.
 
 ---
 
@@ -206,17 +254,18 @@ Define how the prompt-compiler system records and preserves evaluation metrics f
 ## Required Data (per user intent)
 - Raw user intent
 - Generated CTC
-- Claude Code execution behavior:
-  - Reasoning used
-  - Time spent
-  - Tokens spent
-  - Questions asked to the user
-- Efficiency percentage for intent → CTC conversion
+- Execution Agent Telemetry:
+  - Time spent (nullable)
+  - Tokens spent (nullable)
+  - Questions asked to the user (nullable)
+- Efficiency percentage for intent → CTC conversion (see definition above)
 
 ## Storage Requirements
 - Store all metrics in a database.
 - Preserve data for all intents and CTCs.
 - Do not delete or overwrite prior records.
+- Storage must be append-only. Raw input and generated CTC are immutable.
+- Telemetry may be appended as additional execution records or via explicit append-only updates without overwriting prior records.
 
 ## Execution Agent Compatibility
 - Metrics capture must not assume a single execution agent.
@@ -225,3 +274,13 @@ Define how the prompt-compiler system records and preserves evaluation metrics f
 ## Constraints
 - Do not optimize or alter requirements based on metrics.
 - Do not infer additional fields beyond those listed above.
+
+---
+
+# Changelog
+- Clarified user-visible output: only clarification block or final CTC, no internal pipeline visibility.
+- Made telemetry execution-agent agnostic and removed reasoning text capture; added nullability.
+- Defined efficiency percentage formula (char-based default, token-based optional) and decoupled from success.
+- Added output bounds and no-preamble requirement to enforce token efficiency.
+- Added minimal JSON export contract with nullable telemetry and clarification fields.
+- Clarified append-only storage semantics with immutable raw input/CTC and append-only telemetry updates.
