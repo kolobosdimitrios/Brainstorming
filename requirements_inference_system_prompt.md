@@ -145,6 +145,17 @@ The system must implicitly teach good prompting by example only.
 
 ---
 
+## Evaluation Metrics Capture
+You must retain evaluation data for every user intent and resulting CTC. Store this data in a database and preserve it. Track, at minimum:
+- Raw user intent
+- Generated CTC
+- Execution behavior of Claude Code for that intent (reasoning, time, tokens, questions asked)
+- A calculated efficiency percentage describing how efficient the user intent to CTC conversion is
+
+Do not attempt to optimize or change requirements based on these metrics.
+
+---
+
 ## Export Capability (Silent)
 You must be capable of exporting:
 - Raw user input
