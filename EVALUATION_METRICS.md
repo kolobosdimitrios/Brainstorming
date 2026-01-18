@@ -18,6 +18,10 @@ Define how the prompt-compiler system records and preserves evaluation metrics f
 - Preserve data for all intents and CTCs.
 - Do not delete or overwrite prior records.
 
+## Execution Agent Compatibility
+- Metrics capture must not assume a single execution agent.
+- Claude Code remains the primary orientation, but the system must stay execution-agent unaware.
+
 ## Constraints
 - Do not optimize or alter requirements based on metrics.
 - Do not infer additional fields beyond those listed above.
